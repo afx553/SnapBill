@@ -1,0 +1,14 @@
+{
+  "name": "snapbill",
+  "version": "1.0.0",
+  "description": "Simple digital invoice system with QR + PDF for small businesses",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "pdfkit": "^0.13.0",
+    "qrcode": "^1.5.1"
+  }
+}
