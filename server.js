@@ -1,5 +1,5 @@
 // 📦 SnapBill - Express.js Backend
-// QR + PDF Invoice Generator
+// QR + PDF Invoice Generator + Web Form
 
 const express = require("express");
 const QRCode = require("qrcode");
@@ -9,6 +9,7 @@ const path = require("path");
 
 const app = express();
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 const invoices = {}; // memory storage
 
@@ -45,6 +46,54 @@ app.post("/api/invoice", async (req, res) => {
   generateInvoicePDF(invoiceId, invoices[invoiceId]);
 
   res.json({ invoiceId, invoiceUrl, qr });
+});
+
+// Web Form: Render invoice form
+app.get("/form", (req, res) => {
+  res.send(`
+    <html>
+    <head>
+      <title>إنشاء فاتورة – SnapBill</title>
+      <style>
+        body { font-family: sans-serif; padding: 20px; max-width: 500px; margin: auto; }
+        input, textarea { width: 100%; padding: 8px; margin: 8px 0; }
+        button { padding: 10px 20px; }
+        #result { margin-top: 20px; }
+      </style>
+    </head>
+    <body>
+      <h2>إنشاء فاتورة رقمية</h2>
+      <form method="POST" action="/form">
+        <label>اسم العميل:</label>
+        <input type="text" name="customer" required />
+        <label>المبلغ (ر.س):</label>
+        <input type="number" name="amount" required />
+        <label>تفاصيل:</label>
+        <textarea name="details"></textarea>
+        <button type="submit">إنشاء الفاتورة</button>
+      </form>
+      <div id="result">
+        ${req.query.success ? `<p>✅ <strong>تم إنشاء الفاتورة</strong></p>
+        <p><a href="${req.query.url}" target="_blank">فتح الفاتورة</a></p>
+        <img src="${req.query.qr}" width="150" />` : ""}
+      </div>
+    </body>
+    </html>
+  `);
+});
+
+// Web Form: Handle submission
+app.post("/form", async (req, res) => {
+  const { customer, amount, details } = req.body;
+  const invoiceId = Date.now().toString();
+  invoices[invoiceId] = { customer, amount, details };
+
+  const invoiceUrl = `${req.protocol}://${req.get("host")}/invoice/${invoiceId}`;
+  const qr = await QRCode.toDataURL(invoiceUrl);
+
+  generateInvoicePDF(invoiceId, invoices[invoiceId]);
+
+  res.redirect(`/form?success=1&url=${encodeURIComponent(invoiceUrl)}&qr=${encodeURIComponent(qr)}`);
 });
 
 // API: View Invoice (HTML + Download PDF)
